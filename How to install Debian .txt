@@ -1,0 +1,386 @@
+#### Start by downloading Debian Gnome Live iso here
+
+https://cdimage.debian.org/debian-cd/current-live/amd64/bt-hybrid/
+
+
+
+
+#﻿### Edit these files before installing Debian 12 with the Calamares Live Installer to enable zstd compression during installation
+
+
+sudo gnome-text-editor /usr/lib/x86_64-linux-gnu/calamares/modules/mount/main.py
+
+line 210
+            mount_option = "subvol={}".format(s['subvolume']) + ",compress-force=zstd:9"
+or line 216
+                                        ",".join([mount_option, partition.get("options", ""), "compress-force=zstd:9"])) != 0:
+
+
+sudo gnome-text-editor /etc/calamares/modules/fstab.conf
+
+line 4
+    btrfs: defaults,noatime,autodefrag,compress-force=zstd:9
+line 11
+    btrfs: discard               # removed compress=lzo
+
+
+
+
+#### Do these things after installing Debian Bookworm
+
+
+turn on dark mode
+
+
+settings
+mouse and touchpad
+    touchpad
+        tap to click
+        natural scrolling
+power
+    automatic screen brigthness: disable
+    dim screen when inactive: disable
+    blank screen: never
+    automatic suspend: uncheck plugged in
+    power button behaviour: power off
+    show battery percentage
+users
+    unlock
+    automatic login
+privacy
+    screen lock
+        disable automatic screen lock
+keyboard
+    keyboard shortcuts
+        custom shortcut
+            +
+                name : System Monitor
+                command: gnome-system-monitor
+                shortcut: ctrl + shift + esc
+            +
+                name : Terminal
+                command: gnome-terminal
+                shortcut: ctrl + alt + T
+
+
+echo $XDG_SESSION_TYPE
+#should be wayland
+
+
+# do this if you installed the os using the default installer instead of the live installer
+usermod -aG sudo username
+
+
+sudo nano /etc/bash.bashrc
+# Add this to the end of the file. This fixes no autocomplete for commands on sudo.
+
+# I added this line
+if [ "$PS1" ]; then
+complete -cf sudo
+fi
+
+
+# on btrfs
+sudo swapon --show
+sudo btrfs filesystem mkswapfile --size 8G /swapfile
+sudo swapon /swapfile
+sudo swapon --show
+
+# on ext4
+sudo swapon --show
+sudo fallocate -l 8G /swapfile
+sudo filefrag /swapfile
+# should print /swapfile: 1 extent found, anything below 10 is probably fine
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+
+
+sudo cat /boot/grub/grub.cfg | grep windows
+sudo nano /etc/default/grub
+
+# GRUB_DEFAULT='Windows Boot Manager (on /dev/sda2)'
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=1
+
+
+sudo nano /etc/apt/sources.list
+
+# See https://wiki.debian.org/SourcesList for more information.
+
+deb https://deb.debian.org/debian/ bookworm main contrib non-free non-free-firmware
+# deb-src https://deb.debian.org/debian/ bookworm main contrib non-free non-free-firmware
+
+deb https://deb.debian.org/debian/ bookworm-updates main contrib non-free non-free-firmware
+# deb-src https://deb.debian.org/debian/ bookworm-updates main contrib non-free non-free-firmware
+
+deb https://deb.debian.org/debian/ bookworm-proposed-updates main contrib non-free non-free-firmware
+# deb-src https://deb.debian.org/debian/ bookworm-proposed-updates main contrib non-free non-free-firmware
+
+deb https://deb.debian.org/debian-security/ bookworm-security main contrib non-free non-free-firmware
+# deb-src https://deb.debian.org/debian-security/ bookworm-security main contrib non-free non-free-firmware
+
+deb https://deb.debian.org/debian/ bookworm-backports main contrib non-free non-free-firmware
+# deb-src https://deb.debian.org/debian/ bookworm-backports main contrib non-free non-free-firmware
+
+
+sudo apt update && sudo apt upgrade
+sudo apt install gnome-shell-extension-dash-to-panel git gparted octave rsync mpv clementine vlc unattended-upgrades apt-listchanges cifs-utils gedit gedit-plugins usbutils qt5ct ncat nmap screen systemd-timesyncd zstd mdadm transmission btrfs-compsize gnome-shell-extension-prefs nfs-common mesa-utils wget # syncthing
+
+wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub > linux_signing_key.pub
+sudo install -D -o root -g root -m 644 linux_signing_key.pub /etc/apt/keyrings/linux_signing_key.pub
+sudo sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/linux_signing_key.pub] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list'
+# curl -fSsL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/google-chrome.gpg >> /dev/null
+# echo deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main | sudo tee /etc/apt/sources.list.d/google-chrome.list
+
+wget -O- https://updates.signal.org/desktop/apt/keys.asc | gpg --dearmor > signal-desktop-keyring.gpg
+cat signal-desktop-keyring.gpg | sudo tee /usr/share/keyrings/signal-desktop-keyring.gpg > /dev/null
+echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/signal-desktop-keyring.gpg] https://updates.signal.org/desktop/apt xenial main' | sudo tee /etc/apt/sources.list.d/signal-xenial.list
+
+sudo apt install google-chrome-stable # signal-desktop
+
+# maybe
+# sudo apt remove --purge libreoffice-core
+
+
+# mkdir ~/Templates
+touch ~/Templates/empty_document.txt
+
+
+tweaks
+    appearance
+        legacy applications: adwaita-dark
+    windows titlebars
+        maximize
+        minimize
+
+
+text editor
+    preferences
+        classic dark
+
+
+sudo cp cobalt-dark.xml /usr/share/gtksourceview-4/styles/cobalt-dark.xml
+sudo chown --reference=/usr/share/gtksourceview-4/styles/cobalt.xml /usr/share/gtksourceview-4/styles/cobalt-dark.xml
+sudo chmod --reference=/usr/share/gtksourceview-4/styles/cobalt.xml /usr/share/gtksourceview-4/styles/cobalt-dark.xml
+
+gedit
+    preferences
+        editor
+            tab width: 4
+            insert spaces instead of tabs
+        fonts & colors
+            color scheme: cobalt dark
+
+
+files
+    preferences
+        sort files before folders
+
+
+terminal
+    preferences
+        profiles
+            colours
+                gnome dark
+                background: select black
+
+
+add to favourites
+    terminal
+    gedit
+    clementine (if you are planning to have music on the computer)
+
+remove from favourites
+    evolution
+    help
+    rythmbox
+    software
+
+
+sudo nano /etc/environment.d/100qt5ct-dark-theme.conf
+
+QT_QPA_PLATFORMTHEME=qt5ct
+
+
+qt5ct
+
+palette: custom
+color scheme: darker
+
+
+GNU Octave
+
+preferences
+    command
+        foreground: white
+        background: black
+
+
+sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+# uncomment these lines
+
+        "origin=Debian,codename=${distro_codename}-updates";
+        "origin=Debian,codename=${distro_codename}-proposed-updates";       # maybe don't enable this
+
+
+cat /etc/apt/apt.conf.d/20auto-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades  # if not "1" and "1" type this
+cat /etc/apt/apt.conf.d/20auto-upgrades
+
+
+# if you forgot to set mount points for windows during install
+# sudo mkdir -p /media/windows
+# sudo chmod 777 /media/windows
+# sudo chattr +i /media/windows
+
+
+sudo blkid
+
+sudo nano /etc/fstab
+
+# <file system>                           <mount point>  <type>  <options>  <dump>  <pass>
+UUID=7C02081C0207DA52 /media/windows      ntfs nofail,rw,auto,users,exec,nls=utf8,umask=000,gid=46,uid=1000 0 0
+/swapfile                                 none           swap    sw 0 0
+
+# we run this so we can read errors produces by fstab
+sudo mount -a
+
+
+sudo nano /etc/environment
+
+MOZ_ENABLE_WAYLAND=1
+
+
+sudo nano /etc/mpv/mpv.conf
+
+hwdec=vaapi
+vo=gpu
+fullscreen=yes
+
+
+##### REBOOT #####
+
+
+settings
+    default applications
+        music: clementine
+        video: mpv
+
+
+extensions
+    dash to panel (enable)
+        position
+            panel screen position: left
+        style
+            app icon margin: 4                    (in case you don't fit things otherwise)
+            app icon padding: 2                   (if it looks dumb otherwise)
+            running indication position: left
+            override panel theme background opacity (enable)
+            panel backgound opacity: 20
+            dynamic backgound opacity (enable)
+                change opacity when a window gets closer than: 1
+        fine-tune
+            tray font size: 13                    (or anything that just barely shows the time)
+
+
+https://addons.mozilla.org/en-US/firefox/addon/darkreader/
+https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/
+https://addons.mozilla.org/en-US/firefox/addon/startpage-private-search/
+https://addons.mozilla.org/en-US/firefox/addon/xdm-browser-monitor/
+https://xtremedownloadmanager.com/#downloads
+sudo ./install.sh
+# https://addons.mozilla.org/en-US/firefox/addon/enhanced-h264ify/
+
+
+about:preferences
+    General
+        Open previous windows and tabs
+        Always ask you where to save files
+        Play DRM-controlled content
+    Privacy & Security
+        Ask to save logins and passwords for web sites   (unselect these first)
+            Fill usernames and passwords automatically
+            Suggest and generate strong passwords
+            Suggest Firefox Relay email masks to protect your email addres
+    Permissions
+        Block new requests asking to access your location
+        Block new requests asking to allow notifications
+
+
+# about:config
+# gfx.webrender.all: true    (not needed anymore)
+
+
+about:support
+Compositing: webrender (not Basic)
+Window Protocol: wayland (not x11)
+
+
+# check how much space compress-force=zstd:9 saved
+sudo compsize /bin /home /initrd.img.old /lib64  /srv /usr /vmlinuz /etc /initrd.img /lib /opt /root /sbin /var /vmlinuz.old
+Processed 268699 files, 205861 regular extents (209345 refs), 114457 inline.
+Type       Perc     Disk Usage   Uncompressed Referenced  
+TOTAL       39%      4.1G          10G          10G       
+none       100%      554M         554M         538M       
+zstd        35%      3.5G         9.9G          10G       
+prealloc   100%       12K          12K         8.7M       
+
+
+# if Windows isn't recognised you'll need to chainload it manually
+
+sudo blkid | grep fat
+sudo nano /etc/grub.d/40_custom
+
+#!/bin/sh
+exec tail -n +3 $0
+# This file provides an easy way to add custom menu entries.  Simply type the
+# menu entries you want to add after this comment.  Be careful not to change
+# the 'exec tail' line above.
+
+menuentry 'Windows' --class windows --class os $menuentry_id_option 'should-here-be-something' {
+    insmod part_gpt
+    insmod fat
+    search --no-floppy --fs-uuid --set=root AE62-FBA7
+    chainloader /Microsoft/Boot/bootmgfw.efi
+}
+
+
+
+################################### UPGRADE ###################################
+
+lsb_release -a
+# do these two before updating the sources
+sudo apt update && sudo apt upgrade
+sudo reboot
+
+sudo sed -i'.bak' 's/bookworm/trixie/g' /etc/apt/sources.list
+# make sure no other .list file contains the old stable name
+sudo grep -rnw /etc/apt/sources.list.d/ -e "bookworm"
+sudo apt update
+sudo apt upgrade --without-new-pkgs
+sudo apt full-upgrade
+sudo reboot
+lsb_release -a
+# OPTIONAL
+sudo apt --purge autoremove
+sudo apt autoclean
+
+
+# hint: IMB Model M is a 102 international keyboard
+
+
+
+
+
+
+########################### FOR WINDOWS 11 ###########################
+
+cmd - run as administrator
+
+reg add "HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\TimeZoneInformation" /v RealTimeIsUniversal /d 1 /t REG_DWORD /f
+
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device" /v DevicePasswordLessBuildVersion /d 0 /t REG_DWORD /f
+
+
+
+
